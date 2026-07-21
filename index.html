@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nord Studio // Advanced Task Manager</title>
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body>
+
+    <div class="todo-card">
+        <header class="todo-header">
+            <h1>Workspace_<span>Tasks</span></h1>
+            <p>Pinnacle Labs Web Dev // Advanced Task 02</p>
+        </header>
+
+        <main class="input-section">
+            <div class="input-row">
+                <input type="text" id="task-input" placeholder="Create a new workspace objective..." autocomplete="off">
+                <select id="priority-input" class="priority-select">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+                <button id="add-btn">Deploy</button>
+            </div>
+        </main>
+
+        <nav class="filter-tabs">
+            <button class="tab-btn active" data-filter="all">All</button>
+            <button class="tab-btn" data-filter="active">Active</button>
+            <button class="tab-btn" data-filter="completed">Completed</button>
+        </nav>
+
+        <section class="list-section">
+            <ul id="task-list">
+                </ul>
+        </section>
+
+        <footer class="todo-footer" id="todo-footer" style="display: none;">
+            <span id="task-count">0 tasks remaining</span>
+            <button id="clear-all-btn" class="btn-secondary">Clear Completed</button>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
