@@ -8,7 +8,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const clearAllBtn = document.getElementById("clear-all-btn");
     const tabButtons = document.querySelectorAll(".tab-btn");
 
-    let tasks = JSON.parse(localStorage.getItem("nord_matrix_tasks")) || [];
+    const STORAGE_KEY = "nord_matrix_tasks";
+    function loadTasks() {
+        try {
+            const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+            if (!Array.isArray(stored)) return [];
+            return stored.filter((task) =>
+                task && Number.isSafeInteger(task.id) &&
+                typeof task.text === "string" &&
+                typeof task.completed === "boolean" &&
+                ["low", "medium", "high"].includes(task.priority)
+            );
+        } catch {
+            return [];
+        }
+    }
+
+    let tasks = loadTasks();
     let currentFilter = "all";
 
     renderTasks();
@@ -23,8 +39,9 @@ document.addEventListener("DOMContentLoaded", () => {
     tabButtons.forEach(button => {
         button.addEventListener("click", (e) => {
             tabButtons.forEach(btn => btn.classList.remove("active"));
-            e.target.classList.add("active");
-            currentFilter = e.target.getAttribute("data-filter");
+            const selected = e.currentTarget;
+            selected.classList.add("active");
+            currentFilter = selected.getAttribute("data-filter") || "all";
             renderTasks();
         });
     });
@@ -69,11 +86,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateStorage() {
-        localStorage.setItem("nord_matrix_tasks", JSON.stringify(tasks));
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        } catch (error) {
+            console.error("Could not save tasks to browser storage:", error);
+        }
     }
 
     function renderTasks() {
-        taskList.innerHTML = "";
+        taskList.replaceChildren();
         
         // Filter elements depending on active navigation state
         const filteredTasks = tasks.filter(task => {
@@ -84,7 +105,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (tasks.length === 0) {
             footer.style.display = "none";
-            taskList.innerHTML = `<li style="background: transparent; border: 1px dashed #4C566A; justify-content: center; color: #4C566A; cursor: default;">No pending objectives active</li>`;
+            const empty = document.createElement("li");
+            empty.className = "empty-state";
+            empty.textContent = "No pending objectives active";
+            taskList.appendChild(empty);
             return;
         }
 
@@ -102,17 +126,17 @@ document.addEventListener("DOMContentLoaded", () => {
             // Dynamic badge priority selector rendering
             const badge = document.createElement("span");
             badge.className = `badge ${task.priority}`;
-            badge.innerText = task.priority;
+            badge.textContent = task.priority;
 
             const textSpan = document.createElement("span");
-            textSpan.innerText = task.text;
+            textSpan.textContent = task.text;
 
             contentArea.appendChild(badge);
             contentArea.appendChild(textSpan);
 
             const delBtn = document.createElement("button");
             delBtn.className = "delete-btn";
-            delBtn.innerHTML = "✕";
+            delBtn.textContent = "✕";
             delBtn.addEventListener("click", (e) => deleteTask(task.id, e));
 
             li.appendChild(contentArea);
@@ -121,6 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         const activeCount = tasks.filter(t => !t.completed).length;
-        taskCount.innerText = `${activeCount} active objective${activeCount === 1 ? '' : 's'} remaining`;
+        taskCount.textContent = `${activeCount} active objective${activeCount === 1 ? '' : 's'} remaining`;
     }
 });
