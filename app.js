@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("task-form");
     const taskInput = document.getElementById("task-input");
     const priorityInput = document.getElementById("priority-input");
     const addBtn = document.getElementById("add-btn");
@@ -9,13 +10,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const tabButtons = document.querySelectorAll(".tab-btn");
 
     const STORAGE_KEY = "nord_matrix_tasks";
+
     function loadTasks() {
         try {
             const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
             if (!Array.isArray(stored)) return [];
             return stored.filter((task) =>
-                task && Number.isSafeInteger(task.id) &&
+                task &&
+                Number.isSafeInteger(task.id) &&
                 typeof task.text === "string" &&
+                task.text.trim().length > 0 &&
                 typeof task.completed === "boolean" &&
                 ["low", "medium", "high"].includes(task.priority)
             );
@@ -27,124 +31,146 @@ document.addEventListener("DOMContentLoaded", () => {
     let tasks = loadTasks();
     let currentFilter = "all";
 
-    renderTasks();
-
-    addBtn.addEventListener("click", createTask);
-    taskInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") createTask();
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        createTask();
     });
     clearAllBtn.addEventListener("click", clearCompletedTasks);
 
-    // Setup Navigation Filter Tab Event Listeners
-    tabButtons.forEach(button => {
-        button.addEventListener("click", (e) => {
-            tabButtons.forEach(btn => btn.classList.remove("active"));
-            const selected = e.currentTarget;
-            selected.classList.add("active");
-            currentFilter = selected.getAttribute("data-filter") || "all";
+    tabButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            tabButtons.forEach((btn) => {
+                const active = btn === button;
+                btn.classList.toggle("active", active);
+                btn.setAttribute("aria-pressed", String(active));
+            });
+            currentFilter = button.getAttribute("data-filter") || "all";
             renderTasks();
         });
     });
 
+    renderTasks();
+
     function createTask() {
         const text = taskInput.value.trim();
-        if (!text) return;
+        if (!text) {
+            taskInput.focus();
+            return;
+        }
 
-        const newObj = {
-            id: Date.now(),
-            text: text,
+        const nextId = Math.max(Date.now(), ...tasks.map((task) => task.id + 1), 1);
+        tasks.push({
+            id: nextId,
+            text,
             priority: priorityInput.value,
-            completed: false
-        };
+            completed: false,
+        });
 
-        tasks.push(newObj);
-        updateStorage();
+        if (!updateStorage()) return;
         renderTasks();
         taskInput.value = "";
+        taskInput.focus();
     }
 
     function toggleTask(id) {
-        tasks = tasks.map(task => {
-            if (task.id === id) return { ...task, completed: !task.completed };
-            return task;
-        });
-        updateStorage();
+        tasks = tasks.map((task) =>
+            task.id === id ? { ...task, completed: !task.completed } : task
+        );
+        if (!updateStorage()) return;
         renderTasks();
     }
 
-    function deleteTask(id, event) {
-        event.stopPropagation();
-        tasks = tasks.filter(task => task.id !== id);
-        updateStorage();
+    function deleteTask(id) {
+        tasks = tasks.filter((task) => task.id !== id);
+        if (!updateStorage()) return;
         renderTasks();
     }
 
     function clearCompletedTasks() {
-        tasks = tasks.filter(task => !task.completed);
-        updateStorage();
+        const remaining = tasks.filter((task) => !task.completed);
+        if (remaining.length === tasks.length) return;
+        tasks = remaining;
+        if (!updateStorage()) return;
         renderTasks();
     }
 
     function updateStorage() {
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-        } catch (error) {
-            console.error("Could not save tasks to browser storage:", error);
+            return true;
+        } catch {
+            renderStorageError();
+            return false;
         }
+    }
+
+    function renderStorageError() {
+        taskList.replaceChildren();
+        const message = document.createElement("li");
+        message.className = "empty-state error-state";
+        message.textContent = "Browser storage is unavailable. Your latest change was not saved.";
+        taskList.appendChild(message);
     }
 
     function renderTasks() {
         taskList.replaceChildren();
-        
-        // Filter elements depending on active navigation state
-        const filteredTasks = tasks.filter(task => {
+
+        const filteredTasks = tasks.filter((task) => {
             if (currentFilter === "active") return !task.completed;
             if (currentFilter === "completed") return task.completed;
             return true;
         });
 
-        if (tasks.length === 0) {
-            footer.style.display = "none";
+        footer.hidden = tasks.length === 0;
+
+        if (filteredTasks.length === 0) {
             const empty = document.createElement("li");
             empty.className = "empty-state";
-            empty.textContent = "No pending objectives active";
+            empty.textContent = tasks.length === 0
+                ? "No objectives yet. Deploy your first task above."
+                : `No ${currentFilter} objectives.`;
             taskList.appendChild(empty);
-            return;
+        } else {
+            filteredTasks.forEach(renderTask);
         }
 
-        footer.style.display = "flex";
+        const activeCount = tasks.filter((task) => !task.completed).length;
+        taskCount.textContent = `${activeCount} active objective${activeCount === 1 ? "" : "s"} remaining`;
+    }
 
-        filteredTasks.forEach(task => {
-            const li = document.createElement("li");
-            if (task.completed) li.classList.add("completed");
-            li.addEventListener("click", () => toggleTask(task.id));
+    function renderTask(task) {
+        const li = document.createElement("li");
+        if (task.completed) li.classList.add("completed");
 
-            // Inner content element wrapper
-            const contentArea = document.createElement("div");
-            contentArea.className = "task-content-area";
+        const toggleBtn = document.createElement("button");
+        toggleBtn.className = "task-toggle";
+        toggleBtn.type = "button";
+        toggleBtn.setAttribute("aria-pressed", String(task.completed));
+        toggleBtn.setAttribute("aria-label", task.completed ? "Mark task active" : "Mark task completed");
 
-            // Dynamic badge priority selector rendering
-            const badge = document.createElement("span");
-            badge.className = `badge ${task.priority}`;
-            badge.textContent = task.priority;
+        const contentArea = document.createElement("span");
+        contentArea.className = "task-content-area";
 
-            const textSpan = document.createElement("span");
-            textSpan.textContent = task.text;
+        const badge = document.createElement("span");
+        badge.className = `badge ${task.priority}`;
+        badge.textContent = task.priority;
 
-            contentArea.appendChild(badge);
-            contentArea.appendChild(textSpan);
+        const textSpan = document.createElement("span");
+        textSpan.className = "task-text";
+        textSpan.textContent = task.text;
 
-            const delBtn = document.createElement("button");
-            delBtn.className = "delete-btn";
-            delBtn.textContent = "✕";
-            delBtn.addEventListener("click", (e) => deleteTask(task.id, e));
+        contentArea.append(badge, textSpan);
+        toggleBtn.appendChild(contentArea);
+        toggleBtn.addEventListener("click", () => toggleTask(task.id));
 
-            li.appendChild(contentArea);
-            li.appendChild(delBtn);
-            taskList.appendChild(li);
-        });
+        const delBtn = document.createElement("button");
+        delBtn.className = "delete-btn";
+        delBtn.type = "button";
+        delBtn.textContent = "✕";
+        delBtn.setAttribute("aria-label", `Delete task: ${task.text}`);
+        delBtn.addEventListener("click", () => deleteTask(task.id));
 
-        const activeCount = tasks.filter(t => !t.completed).length;
-        taskCount.textContent = `${activeCount} active objective${activeCount === 1 ? '' : 's'} remaining`;
+        li.append(toggleBtn, delBtn);
+        taskList.appendChild(li);
     }
 });
