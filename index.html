@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A lightweight local task manager with priorities, filters and persistent browser storage.">
     <title>Nord Studio // Advanced Task Manager</title>
-    <link rel="stylesheet" href="style.css"> 
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <div class="todo-card">
         <header class="todo-header">
             <h1>Workspace_<span>Tasks</span></h1>
@@ -15,31 +15,32 @@
         </header>
 
         <main class="input-section">
-            <div class="input-row">
-                <input type="text" id="task-input" placeholder="Create a new workspace objective..." autocomplete="off">
-                <select id="priority-input" class="priority-select">
+            <form class="input-row" id="task-form">
+                <label class="sr-only" for="task-input">Task description</label>
+                <input type="text" id="task-input" name="task" placeholder="Create a new workspace objective..." autocomplete="off" maxlength="200" required>
+                <label class="sr-only" for="priority-input">Task priority</label>
+                <select id="priority-input" class="priority-select" name="priority">
                     <option value="low">Low</option>
                     <option value="medium" selected>Medium</option>
                     <option value="high">High</option>
                 </select>
-                <button id="add-btn">Deploy</button>
-            </div>
+                <button id="add-btn" type="submit">Deploy</button>
+            </form>
         </main>
 
-        <nav class="filter-tabs">
-            <button class="tab-btn active" data-filter="all">All</button>
-            <button class="tab-btn" data-filter="active">Active</button>
-            <button class="tab-btn" data-filter="completed">Completed</button>
+        <nav class="filter-tabs" aria-label="Task filters">
+            <button class="tab-btn active" type="button" data-filter="all" aria-pressed="true">All</button>
+            <button class="tab-btn" type="button" data-filter="active" aria-pressed="false">Active</button>
+            <button class="tab-btn" type="button" data-filter="completed" aria-pressed="false">Completed</button>
         </nav>
 
-        <section class="list-section">
-            <ul id="task-list">
-                </ul>
+        <section class="list-section" aria-live="polite" aria-atomic="false">
+            <ul id="task-list"></ul>
         </section>
 
-        <footer class="todo-footer" id="todo-footer" style="display: none;">
-            <span id="task-count">0 tasks remaining</span>
-            <button id="clear-all-btn" class="btn-secondary">Clear Completed</button>
+        <footer class="todo-footer" id="todo-footer" hidden>
+            <span id="task-count">0 active objectives remaining</span>
+            <button id="clear-all-btn" class="btn-secondary" type="button">Clear Completed</button>
         </footer>
     </div>
 
